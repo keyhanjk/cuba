@@ -21,7 +21,13 @@ import com.haulmont.cuba.gui.WindowManager.OpenType;
 import com.haulmont.cuba.gui.components.CaptionMode;
 import com.haulmont.cuba.gui.components.LookupField;
 import com.haulmont.cuba.gui.components.TokenList;
+import com.haulmont.cuba.gui.components.data.options.ContainerOptions;
 import com.haulmont.cuba.gui.data.CollectionDatasource;
+import com.haulmont.cuba.gui.model.CollectionContainer;
+import com.haulmont.cuba.gui.model.InstanceContainer;
+import com.haulmont.cuba.gui.model.ScreenData;
+import com.haulmont.cuba.gui.screen.FrameOwner;
+import com.haulmont.cuba.gui.screen.UiControllerUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.dom4j.Element;
 
@@ -37,7 +43,10 @@ public class TokenListLoader extends AbstractFieldLoader<TokenList> {
         assignXmlDescriptor(resultComponent, element);
         assignFrame(resultComponent);
 
-        loadDatasource(resultComponent, element);
+        loadContainer(resultComponent, element);
+        if (resultComponent.getValueSource() == null) {
+            loadDatasource(resultComponent, element);
+        }
 
         loadVisible(resultComponent, element);
         loadEditable(resultComponent, element);
@@ -160,10 +169,13 @@ public class TokenListLoader extends AbstractFieldLoader<TokenList> {
                     "TokenList ID", element.attributeValue("id"));
         }
 
-        String optionsDatasource = lookupElement.attributeValue("optionsDatasource");
-        if (!StringUtils.isEmpty(optionsDatasource)) {
-            CollectionDatasource ds = (CollectionDatasource) context.getDsContext().get(optionsDatasource);
-            component.setOptionsDatasource(ds);
+        loadOptionsContainer(component, lookupElement);
+        if (component.getOptions() == null) {
+            String optionsDatasource = lookupElement.attributeValue("optionsDatasource");
+            if (!StringUtils.isEmpty(optionsDatasource)) {
+                CollectionDatasource ds = (CollectionDatasource) context.getDsContext().get(optionsDatasource);
+                component.setOptionsDatasource(ds);
+            }
         }
 
         String optionsCaptionProperty = lookupElement.attributeValue("captionProperty");
@@ -237,6 +249,20 @@ public class TokenListLoader extends AbstractFieldLoader<TokenList> {
         final String filterMode = element.attributeValue("filterMode");
         if (!StringUtils.isEmpty(filterMode)) {
             component.setFilterMode(LookupField.FilterMode.valueOf(filterMode));
+        }
+    }
+
+    protected void loadOptionsContainer(TokenList component, Element element) {
+        String containerId = element.attributeValue("optionsContainer");
+        if (containerId != null) {
+            FrameOwner frameOwner = context.getFrame().getFrameOwner();
+            ScreenData screenData = UiControllerUtils.getScreenData(frameOwner);
+            InstanceContainer container = screenData.getContainer(containerId);
+            if (!(container instanceof CollectionContainer)) {
+                throw new GuiDevelopmentException("Not a CollectionContainer: " + containerId, context.getCurrentFrameId());
+            }
+            //noinspection unchecked
+            component.setOptions(new ContainerOptions((CollectionContainer) container));
         }
     }
 }

@@ -17,6 +17,7 @@
 package com.haulmont.cuba.gui.components;
 
 import com.haulmont.cuba.gui.WindowManager.OpenType;
+import com.haulmont.cuba.gui.components.data.Options;
 import com.haulmont.cuba.gui.data.CollectionDatasource;
 
 import javax.annotation.Nullable;
@@ -129,6 +130,9 @@ public interface TokenList<V> extends Field<Collection<V>>,
 
     Map<String, ?> getOptionsMap();
     void setOptionsMap(Map<String, ?> map);
+
+    void setOptions(Options<V> options);
+    Options<V> getOptions();
 
     /**
      * @return whether inner LookupPickerField component has lookup action

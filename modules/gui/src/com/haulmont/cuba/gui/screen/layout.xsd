@@ -2418,7 +2418,7 @@
                 <xs:all>
                     <xs:element name="lookup">
                         <xs:complexType>
-                            <xs:attribute name="optionsDatasource" type="xs:string"/>
+                            <xs:attributeGroup ref="hasOptions"/>
                             <xs:attribute name="captionProperty" type="xs:string"/>
                             <xs:attribute name="lookupScreen" type="xs:string"/>
                             <xs:attribute name="lookup" type="xs:boolean"/>
@@ -2445,7 +2445,8 @@
                 </xs:all>
 
                 <xs:attributeGroup ref="hasCaptionSource"/>
-                <xs:attributeGroup ref="hasDatasourceProp"/>
+                <xs:attributeGroup ref="hasDatasource"/>
+                <xs:attributeGroup ref="hasDataContainer"/>
                 <xs:attributeGroup ref="hasTabIndex"/>
                 <xs:attributeGroup ref="hasContextHelp"/>
 

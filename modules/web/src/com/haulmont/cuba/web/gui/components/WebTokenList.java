@@ -31,6 +31,7 @@ import com.haulmont.cuba.gui.UiComponents;
 import com.haulmont.cuba.gui.WindowManager;
 import com.haulmont.cuba.gui.WindowParams;
 import com.haulmont.cuba.gui.components.*;
+import com.haulmont.cuba.gui.components.data.Options;
 import com.haulmont.cuba.gui.config.WindowConfig;
 import com.haulmont.cuba.gui.config.WindowInfo;
 import com.haulmont.cuba.gui.data.CollectionDatasource;
@@ -270,6 +271,18 @@ public class WebTokenList<V> extends WebV8AbstractField<WebTokenList.CubaTokenLi
     }
 
     @Override
+    public void setOptions(Options<V> options) {
+        //noinspection unchecked
+        lookupPickerField.setOptions((Options<Entity>) options);
+    }
+
+    @Override
+    public Options<V> getOptions() {
+        //noinspection unchecked
+        return (Options<V>) lookupPickerField.getOptions();
+    }
+
+    @Override
     public void setDatasource(Datasource datasource, String property) {
         throw new UnsupportedOperationException("TokenList does not support datasource with property");
     }
@@ -296,7 +309,7 @@ public class WebTokenList<V> extends WebV8AbstractField<WebTokenList.CubaTokenLi
 
     @Override
     public void setValue(Collection<V> value) {
-        throw new UnsupportedOperationException("Setting value to TokenList is not supported");
+        /*throw new UnsupportedOperationException("Setting value to TokenList is not supported");*/
     }
 
     @Override
