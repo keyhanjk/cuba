@@ -32,6 +32,7 @@ import com.haulmont.cuba.gui.WindowManager;
 import com.haulmont.cuba.gui.WindowParams;
 import com.haulmont.cuba.gui.components.*;
 import com.haulmont.cuba.gui.components.data.Options;
+import com.haulmont.cuba.gui.components.data.TokenListItems;
 import com.haulmont.cuba.gui.config.WindowConfig;
 import com.haulmont.cuba.gui.config.WindowInfo;
 import com.haulmont.cuba.gui.data.CollectionDatasource;
@@ -59,7 +60,7 @@ import java.util.function.Function;
 
 import static com.haulmont.cuba.gui.WindowManager.OpenType;
 
-public class WebTokenList<V> extends WebV8AbstractField<WebTokenList.CubaTokenList<V>, V, Collection<V>> implements TokenList<V>,
+public class WebTokenList<V extends Entity> extends WebV8AbstractField<WebTokenList.CubaTokenList<V>, V, Collection<V>> implements TokenList<V>,
         InitializingBean {
 
     protected CollectionDatasource datasource;
@@ -147,6 +148,17 @@ public class WebTokenList<V> extends WebV8AbstractField<WebTokenList.CubaTokenLi
     protected void initComponentsCaptions() {
         addButton.setCaption(messages.getMessage(TokenList.class, "actions.Add"));
         clearButton.setCaption(messages.getMessage(TokenList.class, "actions.Clear"));
+    }
+
+    @Override
+    public void setItems(TokenListItems<V> items) {
+        // TODO: implement
+    }
+
+    @Override
+    public TokenListItems<V> getItems() {
+        // TODO: implement
+        return null;
     }
 
     @Override
