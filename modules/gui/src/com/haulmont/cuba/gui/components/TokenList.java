@@ -19,6 +19,7 @@ package com.haulmont.cuba.gui.components;
 
 import com.haulmont.cuba.core.entity.Entity;
 import com.haulmont.cuba.gui.WindowManager.OpenType;
+import com.haulmont.cuba.gui.components.data.HasValueSource;
 import com.haulmont.cuba.gui.components.data.Options;
 import com.haulmont.cuba.gui.components.data.ValueSource;
 import com.haulmont.cuba.gui.components.data.options.DatasourceOptions;
@@ -38,14 +39,10 @@ public interface TokenList<V extends Entity> extends Field<Collection<V>>,
 
     String NAME = "tokenList";
 
-    @Override
-    void setValueSource(ValueSource<Collection<V>> valueSource);
-
-    @Override
-    ValueSource<Collection<V>> getValueSource();
-
     /**
      * @return bound {@link CollectionDatasource} instance
+     *
+     * @deprecated use {@link HasValueSource#getValueSource()} instead
      */
     @Deprecated
     @Override
@@ -60,6 +57,8 @@ public interface TokenList<V extends Entity> extends Field<Collection<V>>,
      * Binds the given {@code datasource} with field.
      *
      * @param datasource {@link CollectionDatasource} instance
+     *
+     * @deprecated use {@link HasValueSource#setValueSource(ValueSource)} instead
      */
     @Deprecated
     default void setDatasource(CollectionDatasource datasource) {
@@ -67,12 +66,14 @@ public interface TokenList<V extends Entity> extends Field<Collection<V>>,
     }
 
     /**
-     * JavaDoc
+     * Sets options to a field.
+     *
+     * @param options field options
      */
     void setOptions(Options<V> options);
 
     /**
-     * JavaDoc
+     * @return field options
      */
     Options<V> getOptions();
 

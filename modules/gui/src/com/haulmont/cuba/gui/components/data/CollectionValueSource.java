@@ -16,8 +16,60 @@
 
 package com.haulmont.cuba.gui.components.data;
 
+import com.haulmont.bali.events.Subscription;
+import com.haulmont.chile.core.model.MetaClass;
+import com.haulmont.chile.core.model.MetaProperty;
+import com.haulmont.cuba.core.entity.Entity;
+
 import java.util.Collection;
+import java.util.EventObject;
+import java.util.function.Consumer;
 
-public interface CollectionValueSource<I> extends ValueSource<Collection<I>> {
+public interface CollectionValueSource<E extends Entity> extends ValueSource<Collection<E>> {
 
+    E getItem(Object entityId);
+
+    Collection<E> getItems();
+
+    Collection<Object> getItemIds();
+
+    void addItem(E entity);
+
+    void removeItem(E entity);
+
+    void updateItem(E entity);
+
+    boolean containsItem(E entity);
+
+    boolean containsItem(Object entityId);
+
+    MetaClass getMetaClass();
+
+    boolean isNested();
+
+    MetaProperty getProperty();
+
+    Entity getParentEntity();
+
+    Subscription addCollectionChangeListener(Consumer<CollectionChangeEvent> listener);
+
+    class CollectionChangeEvent<V extends Entity> extends EventObject {
+
+        private final Collection<V> value;
+
+        public CollectionChangeEvent(Object source, Collection<V> value) {
+            super(source);
+            this.value = value;
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public CollectionValueSource<V> getSource() {
+            return (CollectionValueSource<V>) super.getSource();
+        }
+
+        public Collection<V> getValue() {
+            return value;
+        }
+    }
 }

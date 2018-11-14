@@ -95,17 +95,19 @@ public class TokenListLoader extends AbstractFieldLoader<TokenList> {
     @Override
     protected void loadContainer(TokenList component, Element element) {
         String containerId = element.attributeValue("dataContainer");
+        if (containerId != null && !containerId.isEmpty()) {
+            FrameOwner frameOwner = context.getFrame().getFrameOwner();
+            ScreenData screenData = UiControllerUtils.getScreenData(frameOwner);
+            InstanceContainer container = screenData.getContainer(containerId);
 
-        FrameOwner frameOwner = context.getFrame().getFrameOwner();
-        ScreenData screenData = UiControllerUtils.getScreenData(frameOwner);
-        InstanceContainer container = screenData.getContainer(containerId);
+            if (!(container instanceof CollectionContainer)) {
+                throw new GuiDevelopmentException(
+                        String.format("Can't set container '%s' for TokenList because it supports only CollectionContainers",
+                                containerId), context.getFullFrameId());
+            }
 
-        if (container != null && !(container instanceof CollectionContainer)) {
-            throw new GuiDevelopmentException(
-                    String.format("Can't set container '%s' for TokenList because it supports only CollectionContainers",
-                            containerId), context.getFullFrameId());
+            component.setValueSource(new CollectionContainerValueSource((CollectionContainer) container));
         }
-        component.setValueSource(new CollectionContainerValueSource((CollectionContainer) container));
     }
 
     protected void loadRefreshOptionsOnLookupClose(TokenList component, Element element) {
