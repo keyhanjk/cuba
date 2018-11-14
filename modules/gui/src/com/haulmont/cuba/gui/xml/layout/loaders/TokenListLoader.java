@@ -22,8 +22,8 @@ import com.haulmont.cuba.gui.components.CaptionMode;
 import com.haulmont.cuba.gui.components.LookupField;
 import com.haulmont.cuba.gui.components.TokenList;
 import com.haulmont.cuba.gui.components.data.options.ContainerOptions;
-import com.haulmont.cuba.gui.components.data.tokenlist.ContainerTokenListItems;
-import com.haulmont.cuba.gui.components.data.tokenlist.DatasourceTokenListItems;
+import com.haulmont.cuba.gui.components.data.value.CollectionContainerValueSource;
+import com.haulmont.cuba.gui.components.data.value.CollectionDatasourceValueSource;
 import com.haulmont.cuba.gui.data.CollectionDatasource;
 import com.haulmont.cuba.gui.data.Datasource;
 import com.haulmont.cuba.gui.model.CollectionContainer;
@@ -86,7 +86,7 @@ public class TokenListLoader extends AbstractFieldLoader<TokenList> {
 
     protected void loadTokenListItems(Element element) {
         loadContainer(resultComponent, element);
-        if (resultComponent.getItems() == null) {
+        if (resultComponent.getValueSource() == null) {
             loadDatasource(resultComponent, element);
         }
     }
@@ -105,7 +105,7 @@ public class TokenListLoader extends AbstractFieldLoader<TokenList> {
                     String.format("Can't set container '%s' for TokenList because it supports only CollectionContainers",
                             containerId), context.getFullFrameId());
         }
-        component.setItems(new ContainerTokenListItems((CollectionContainer) container));
+        component.setValueSource(new CollectionContainerValueSource((CollectionContainer) container));
     }
 
     protected void loadRefreshOptionsOnLookupClose(TokenList component, Element element) {
@@ -273,7 +273,7 @@ public class TokenListLoader extends AbstractFieldLoader<TokenList> {
                                 datasourceId), context.getFullFrameId());
             }
 
-            tokenList.setItems(new DatasourceTokenListItems((CollectionDatasource) datasource));
+            tokenList.setValueSource(new CollectionDatasourceValueSource((CollectionDatasource) datasource));
         }
     }
 

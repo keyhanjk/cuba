@@ -20,11 +20,11 @@ package com.haulmont.cuba.gui.components;
 import com.haulmont.cuba.core.entity.Entity;
 import com.haulmont.cuba.gui.WindowManager.OpenType;
 import com.haulmont.cuba.gui.components.data.Options;
-import com.haulmont.cuba.gui.components.data.TokenListItems;
+import com.haulmont.cuba.gui.components.data.ValueSource;
 import com.haulmont.cuba.gui.components.data.options.DatasourceOptions;
 import com.haulmont.cuba.gui.components.data.options.ListOptions;
 import com.haulmont.cuba.gui.components.data.options.MapOptions;
-import com.haulmont.cuba.gui.components.data.tokenlist.DatasourceTokenListItems;
+import com.haulmont.cuba.gui.components.data.value.CollectionDatasourceValueSource;
 import com.haulmont.cuba.gui.data.CollectionDatasource;
 
 import javax.annotation.Nullable;
@@ -38,15 +38,33 @@ public interface TokenList<V extends Entity> extends Field<Collection<V>>,
 
     String NAME = "tokenList";
 
-    /**
-     * JavaDoc
-     */
-    void setItems(TokenListItems<V> items);
+    @Override
+    void setValueSource(ValueSource<Collection<V>> valueSource);
+
+    @Override
+    ValueSource<Collection<V>> getValueSource();
 
     /**
-     * JavaDoc
+     * @return bound {@link CollectionDatasource} instance
      */
-    TokenListItems<V> getItems();
+    @Deprecated
+    @Override
+    default CollectionDatasource getDatasource() {
+        ValueSource<Collection<V>> valueSource = getValueSource();
+        return valueSource instanceof CollectionDatasourceValueSource
+                ? ((CollectionDatasourceValueSource<V>) valueSource).getDatasource()
+                : null;
+    }
+
+    /**
+     * Binds the given {@code datasource} with field.
+     *
+     * @param datasource {@link CollectionDatasource} instance
+     */
+    @Deprecated
+    default void setDatasource(CollectionDatasource datasource) {
+        setValueSource(datasource == null ? null : new CollectionDatasourceValueSource<>(datasource));
+    }
 
     /**
      * JavaDoc
@@ -57,32 +75,6 @@ public interface TokenList<V extends Entity> extends Field<Collection<V>>,
      * JavaDoc
      */
     Options<V> getOptions();
-
-    /**
-     * @return bound {@link CollectionDatasource} instance
-     *
-     * @deprecated use {@link TokenList#getItems()} instead
-     */
-    @Deprecated
-    @Override
-    default CollectionDatasource getDatasource() {
-        TokenListItems<V> items = getItems();
-        return items instanceof DatasourceTokenListItems
-                ? ((DatasourceTokenListItems) items).getDatasource()
-                : null;
-    }
-
-    /**
-     * Binds the given {@code datasource} with field.
-     *
-     * @param datasource {@link CollectionDatasource} instance
-     *
-     * @deprecated use {@link TokenList#setItems(TokenListItems)} instead
-     */
-    @Deprecated
-    default void setDatasource(CollectionDatasource datasource) {
-        setItems(datasource == null ? null : new DatasourceTokenListItems(datasource));
-    }
 
     /**
      * @return options filter mode

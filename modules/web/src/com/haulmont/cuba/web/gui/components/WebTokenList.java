@@ -18,7 +18,6 @@
 package com.haulmont.cuba.web.gui.components;
 
 import com.haulmont.bali.events.Subscription;
-import com.haulmont.bali.events.sys.VoidSubscription;
 import com.haulmont.bali.util.Preconditions;
 import com.haulmont.chile.core.model.Instance;
 import com.haulmont.chile.core.model.MetaProperty;
@@ -32,7 +31,6 @@ import com.haulmont.cuba.gui.WindowManager;
 import com.haulmont.cuba.gui.WindowParams;
 import com.haulmont.cuba.gui.components.*;
 import com.haulmont.cuba.gui.components.data.Options;
-import com.haulmont.cuba.gui.components.data.TokenListItems;
 import com.haulmont.cuba.gui.config.WindowConfig;
 import com.haulmont.cuba.gui.config.WindowInfo;
 import com.haulmont.cuba.gui.data.CollectionDatasource;
@@ -48,7 +46,6 @@ import com.vaadin.ui.Component;
 import com.vaadin.ui.CustomField;
 import com.vaadin.ui.HorizontalLayout;
 import com.vaadin.ui.VerticalLayout;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
 
 import javax.annotation.Nonnull;
@@ -60,8 +57,8 @@ import java.util.function.Function;
 
 import static com.haulmont.cuba.gui.WindowManager.OpenType;
 
-public class WebTokenList<V extends Entity> extends WebV8AbstractField<WebTokenList.CubaTokenList<V>, V, Collection<V>> implements TokenList<V>,
-        InitializingBean {
+public class WebTokenList<V extends Entity> extends WebV8AbstractField<WebTokenList.CubaTokenList<V>, V, Collection<V>>
+        implements TokenList<V>, InitializingBean {
 
     protected CollectionDatasource datasource;
     protected CollectionDatasource.CollectionChangeListener collectionChangeListener;
@@ -148,22 +145,6 @@ public class WebTokenList<V extends Entity> extends WebV8AbstractField<WebTokenL
     protected void initComponentsCaptions() {
         addButton.setCaption(messages.getMessage(TokenList.class, "actions.Add"));
         clearButton.setCaption(messages.getMessage(TokenList.class, "actions.Clear"));
-    }
-
-    @Override
-    public void setItems(TokenListItems<V> items) {
-        // TODO: implement
-    }
-
-    @Override
-    public TokenListItems<V> getItems() {
-        // TODO: implement
-        return null;
-    }
-
-    @Override
-    public CollectionDatasource getDatasource() {
-        return datasource;
     }
 
     @Override
@@ -263,16 +244,6 @@ public class WebTokenList<V extends Entity> extends WebV8AbstractField<WebTokenL
     }
 
     @Override
-    public CollectionDatasource getOptionsDatasource() {
-        return lookupPickerField.getOptionsDatasource();
-    }
-
-    @Override
-    public void setOptionsDatasource(CollectionDatasource datasource) {
-        lookupPickerField.setOptionsDatasource(datasource);
-    }
-
-    @Override
     public void setRefreshOptionsOnLookupClose(boolean refresh) {
         lookupPickerField.setRefreshOptionsOnLookupClose(refresh);
     }
@@ -307,55 +278,6 @@ public class WebTokenList<V extends Entity> extends WebV8AbstractField<WebTokenL
     @Override
     public MetaPropertyPath getMetaPropertyPath() {
         return null;
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public Collection<V> getValue() {
-        if (datasource != null) {
-            List<Object> items = new ArrayList(datasource.getItems());
-            return (Collection<V>) items;
-        } else
-            return Collections.emptyList();
-    }
-
-    @Override
-    public void setValue(Collection<V> value) {
-        /*throw new UnsupportedOperationException("Setting value to TokenList is not supported");*/
-    }
-
-    @Override
-    public Subscription addValueChangeListener(Consumer listener) {
-        LoggerFactory.getLogger(WebTokenList.class)
-                .warn("addValueChangeListener not implemented for TokenList");
-
-        return VoidSubscription.INSTANCE;
-    }
-
-    @Override
-    public void removeValueChangeListener(Consumer listener) {
-        LoggerFactory.getLogger(WebTokenList.class)
-                .warn("removeValueChangeListener not implemented for TokenList");
-    }
-
-    @Override
-    public List getOptionsList() {
-        return lookupPickerField.getOptionsList();
-    }
-
-    @Override
-    public void setOptionsList(List optionsList) {
-        lookupPickerField.setOptionsList(optionsList);
-    }
-
-    @Override
-    public Map<String, ?> getOptionsMap() {
-        return lookupPickerField.getOptionsMap();
-    }
-
-    @Override
-    public void setOptionsMap(Map<String, ?> map) {
-        lookupPickerField.setOptionsMap((Map<String, Entity>) map);
     }
 
     @Override
