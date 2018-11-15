@@ -18,6 +18,7 @@
 package com.haulmont.cuba.gui.components;
 
 import com.haulmont.cuba.core.entity.Entity;
+import com.haulmont.cuba.gui.Screens;
 import com.haulmont.cuba.gui.WindowManager.OpenType;
 import com.haulmont.cuba.gui.components.data.HasValueSource;
 import com.haulmont.cuba.gui.components.data.Options;
@@ -25,8 +26,9 @@ import com.haulmont.cuba.gui.components.data.ValueSource;
 import com.haulmont.cuba.gui.components.data.options.DatasourceOptions;
 import com.haulmont.cuba.gui.components.data.options.ListOptions;
 import com.haulmont.cuba.gui.components.data.options.MapOptions;
-import com.haulmont.cuba.gui.components.data.value.CollectionDatasourceValueSource;
+import com.haulmont.cuba.gui.components.data.value.*;
 import com.haulmont.cuba.gui.data.CollectionDatasource;
+import com.haulmont.cuba.gui.screen.OpenMode;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
@@ -66,7 +68,7 @@ public interface TokenList<V extends Entity> extends Field<Collection<V>>,
     }
 
     /**
-     * Sets options to a field.
+     * Sets field options.
      *
      * @param options field options
      */
@@ -76,6 +78,31 @@ public interface TokenList<V extends Entity> extends Field<Collection<V>>,
      * @return field options
      */
     Options<V> getOptions();
+
+    /**
+     * @return {@link CollectionDatasource} instance that stores field options
+     * @deprecated use {@link TokenList#getOptions()} instead
+     */
+    @Deprecated
+    default CollectionDatasource getOptionsDatasource() {
+        Options<V> options = getOptions();
+        if (options instanceof DatasourceOptions) {
+            return ((DatasourceOptions) options).getDatasource();
+        }
+        return null;
+    }
+
+    /**
+     * Sets the given {@code datasource} as options datasource.
+     *
+     * @param datasource options datasource
+     * @deprecated use {@link TokenList#setOptions(Options)} instead
+     */
+    @SuppressWarnings("unchecked")
+    @Deprecated
+    default void setOptionsDatasource(CollectionDatasource datasource) {
+        setOptions(datasource == null ? null : new DatasourceOptions(datasource));
+    }
 
     /**
      * @return options filter mode
@@ -116,6 +143,7 @@ public interface TokenList<V extends Entity> extends Field<Collection<V>>,
     /**
      * @return option captions mode generation
      */
+    @Deprecated
     CaptionMode getOptionsCaptionMode();
 
     /**
@@ -123,11 +151,13 @@ public interface TokenList<V extends Entity> extends Field<Collection<V>>,
      *
      * @param captionMode mode
      */
+    @Deprecated
     void setOptionsCaptionMode(CaptionMode captionMode);
 
     /**
      * @return a property that is used for option captions generation
      */
+    @Deprecated
     String getOptionsCaptionProperty();
 
     /**
@@ -135,42 +165,18 @@ public interface TokenList<V extends Entity> extends Field<Collection<V>>,
      *
      * @param captionProperty property
      */
+    @Deprecated
     void setOptionsCaptionProperty(String captionProperty);
-
-    /**
-     * @return whether options should be refreshed after lookup window closing
-     */
-    boolean isRefreshOptionsOnLookupClose();
-
-    /**
-     * @return {@link CollectionDatasource} instance that stores field options
-     * @deprecated use {@link TokenList#getOptions()} instead
-     */
-    @Deprecated
-    default CollectionDatasource getOptionsDatasource() {
-        Options<V> options = getOptions();
-        if (options instanceof DatasourceOptions) {
-            return ((DatasourceOptions) options).getDatasource();
-        }
-        return null;
-    }
-
-    /**
-     * Sets the given {@code datasource} as options datasource.
-     *
-     * @param datasource options datasource
-     * @deprecated use {@link TokenList#setOptions(Options)} instead
-     */
-    @SuppressWarnings("unchecked")
-    @Deprecated
-    default void setOptionsDatasource(CollectionDatasource datasource) {
-        setOptions(datasource == null ? null : new DatasourceOptions(datasource));
-    }
 
     /**
      * Sets whether options should be refreshed after lookup window closing.
      */
     void setRefreshOptionsOnLookupClose(boolean refresh);
+
+    /**
+     * @return whether options should be refreshed after lookup window closing
+     */
+    boolean isRefreshOptionsOnLookupClose();
 
     /**
      * @return options list
@@ -309,7 +315,10 @@ public interface TokenList<V extends Entity> extends Field<Collection<V>>,
 
     /**
      * @return lookup screen open mode
+     *
+     * @deprecated use {@link TokenList#getLookupLaunchMode()} instead
      */
+    @Deprecated
     OpenType getLookupOpenMode();
 
     /**
@@ -318,8 +327,25 @@ public interface TokenList<V extends Entity> extends Field<Collection<V>>,
      * {@link OpenType#THIS_TAB} is the default.
      *
      * @param lookupOpenMode open mode
+     *
+     * @deprecated use {@link TokenList#setLookupLaunchMode(Screens.LaunchMode)} instead
      */
+    @Deprecated
     void setLookupOpenMode(OpenType lookupOpenMode);
+
+    /**
+     * @return lookup screen launch mode
+     */
+    Screens.LaunchMode getLookupLaunchMode();
+
+    /**
+     * Sets lookup screen launch mode.
+     * <p>
+     * {@link OpenMode#THIS_TAB} is the default.
+     *
+     * @param launchMode launch mode
+     */
+    void setLookupLaunchMode(Screens.LaunchMode launchMode);
 
     /**
      * @return whether inline tokens mode should be used

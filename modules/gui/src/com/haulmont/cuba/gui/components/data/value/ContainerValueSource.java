@@ -214,4 +214,8 @@ public class ContainerValueSource<E extends Entity, V> implements EntityValueSou
             events.publish(ValueChangeEvent.class, new ValueChangeEvent<>(this, (V)e.getPrevValue(), (V)e.getValue()));
         }
     }
+
+    public InstanceContainer<E> getContainer() {
+        return container;
+    }
 }

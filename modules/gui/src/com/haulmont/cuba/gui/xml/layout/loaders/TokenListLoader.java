@@ -22,8 +22,7 @@ import com.haulmont.cuba.gui.components.CaptionMode;
 import com.haulmont.cuba.gui.components.LookupField;
 import com.haulmont.cuba.gui.components.TokenList;
 import com.haulmont.cuba.gui.components.data.options.ContainerOptions;
-import com.haulmont.cuba.gui.components.data.value.CollectionContainerValueSource;
-import com.haulmont.cuba.gui.components.data.value.CollectionDatasourceValueSource;
+import com.haulmont.cuba.gui.components.data.value.*;
 import com.haulmont.cuba.gui.data.CollectionDatasource;
 import com.haulmont.cuba.gui.data.Datasource;
 import com.haulmont.cuba.gui.model.CollectionContainer;
@@ -95,18 +94,18 @@ public class TokenListLoader extends AbstractFieldLoader<TokenList> {
     @Override
     protected void loadContainer(TokenList component, Element element) {
         String containerId = element.attributeValue("dataContainer");
+        String property = element.attributeValue("property");
+
         if (containerId != null && !containerId.isEmpty()) {
             FrameOwner frameOwner = context.getFrame().getFrameOwner();
             ScreenData screenData = UiControllerUtils.getScreenData(frameOwner);
             InstanceContainer container = screenData.getContainer(containerId);
 
-            if (!(container instanceof CollectionContainer)) {
-                throw new GuiDevelopmentException(
-                        String.format("Can't set container '%s' for TokenList because it supports only CollectionContainers",
-                                containerId), context.getFullFrameId());
+            if (StringUtils.isNotEmpty(property)) {
+                component.setValueSource(new ContainerValueSource(container, property));
+            } else {
+                component.setValueSource(new CollectionContainerValueSource((CollectionContainer) container));
             }
-
-            component.setValueSource(new CollectionContainerValueSource((CollectionContainer) container));
         }
     }
 

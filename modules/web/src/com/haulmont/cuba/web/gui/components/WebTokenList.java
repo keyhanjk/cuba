@@ -18,34 +18,27 @@
 package com.haulmont.cuba.web.gui.components;
 
 import com.haulmont.bali.events.Subscription;
-import com.haulmont.chile.core.model.Instance;
-import com.haulmont.chile.core.model.MetaProperty;
-import com.haulmont.chile.core.model.MetaPropertyPath;
+import com.haulmont.chile.core.model.*;
 import com.haulmont.cuba.core.entity.Entity;
-import com.haulmont.cuba.core.global.ExtendedEntities;
-import com.haulmont.cuba.core.global.Messages;
-import com.haulmont.cuba.core.global.Metadata;
-import com.haulmont.cuba.gui.UiComponents;
-import com.haulmont.cuba.gui.WindowManager;
-import com.haulmont.cuba.gui.WindowParams;
+import com.haulmont.cuba.core.global.*;
+import com.haulmont.cuba.gui.*;
+import com.haulmont.cuba.gui.components.Button;
 import com.haulmont.cuba.gui.components.*;
-import com.haulmont.cuba.gui.components.data.BindingState;
-import com.haulmont.cuba.gui.components.data.CollectionValueSource;
-import com.haulmont.cuba.gui.components.data.Options;
-import com.haulmont.cuba.gui.components.data.ValueSource;
+import com.haulmont.cuba.gui.components.data.*;
+import com.haulmont.cuba.gui.components.data.meta.EntityOptions;
+import com.haulmont.cuba.gui.components.data.meta.EntityValueSource;
+import com.haulmont.cuba.gui.components.data.value.*;
 import com.haulmont.cuba.gui.config.WindowConfig;
-import com.haulmont.cuba.gui.config.WindowInfo;
-import com.haulmont.cuba.gui.data.CollectionDatasource;
-import com.haulmont.cuba.gui.data.Datasource;
-import com.haulmont.cuba.gui.screen.StandardCloseAction;
-import com.haulmont.cuba.web.App;
+import com.haulmont.cuba.gui.data.*;
+import com.haulmont.cuba.gui.model.InstanceContainer;
+import com.haulmont.cuba.gui.model.Nested;
+import com.haulmont.cuba.gui.screen.*;
 import com.haulmont.cuba.web.widgets.CubaScrollBoxLayout;
 import com.haulmont.cuba.web.widgets.CubaTokenListLabel;
 import com.vaadin.shared.ui.MarginInfo;
 import com.vaadin.ui.Component;
-import com.vaadin.ui.CustomField;
-import com.vaadin.ui.HorizontalLayout;
-import com.vaadin.ui.VerticalLayout;
+import com.vaadin.ui.*;
+import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.beans.factory.InitializingBean;
 
 import javax.annotation.Nonnull;
@@ -72,11 +65,11 @@ public class WebTokenList<V extends Entity> extends WebV8AbstractField<WebTokenL
     protected Button addButton;
     protected Button clearButton;
 
-    protected LookupPickerField<Entity> lookupPickerField;
+    protected LookupPickerField<V> lookupPickerField;
     protected PickerField.LookupAction lookupAction;
     protected String lookupScreen;
     protected Map<String, Object> lookupScreenParams;
-    protected OpenType lookupOpenMode = OpenType.THIS_TAB;
+    protected Screens.LaunchMode lookupOpenMode = OpenMode.THIS_TAB;
 
     protected Position position = Position.TOP;
     protected boolean inline;
@@ -89,10 +82,11 @@ public class WebTokenList<V extends Entity> extends WebV8AbstractField<WebTokenL
     protected Messages messages;
     protected Metadata metadata;
     protected WindowConfig windowConfig;
+    protected LookupScreens lookupScreens;
 
     protected Function<Object, String> tokenStyleGenerator;
 
-    protected final Consumer<ValueChangeEvent<Entity>> lookupSelectListener = e -> {
+    protected final Consumer<ValueChangeEvent<V>> lookupSelectListener = e -> {
         if (isEditable()) {
             addValueFromLookupPickerField();
         }
@@ -122,6 +116,11 @@ public class WebTokenList<V extends Entity> extends WebV8AbstractField<WebTokenL
         this.windowConfig = windowConfig;
     }
 
+    @Inject
+    public void setLookupScreens(LookupScreens lookupScreens) {
+        this.lookupScreens = lookupScreens;
+    }
+
     @Override
     public void afterPropertiesSet() {
         createComponents();
@@ -149,23 +148,26 @@ public class WebTokenList<V extends Entity> extends WebV8AbstractField<WebTokenL
         super.setValueSource(valueSource);
 
         if (valueSource != null) {
-            ((CollectionValueSource<V>) valueSource).addCollectionChangeListener(event -> {
-                if (lookupPickerField != null) {
-                    if (isLookup()) {
-                        if (getLookupScreen() != null) {
-                            lookupAction.setLookupScreen(getLookupScreen());
-                        } else {
-                            lookupAction.setLookupScreen(null);
-                        }
-
-                        lookupAction.setLookupScreenOpenType(lookupOpenMode);
-                        lookupAction.setLookupScreenParams(lookupScreenParams);
-                    }
-                }
-                component.refreshComponent();
-                component.refreshClickListeners(itemClickListener);
-            });
+            valueSource.addValueChangeListener(e ->
+                    valueCollectionChanged());
         }
+    }
+
+    protected void valueCollectionChanged() {
+        if (lookupPickerField != null) {
+            if (isLookup()) {
+                if (getLookupScreen() != null) {
+                    lookupAction.setLookupScreen(getLookupScreen());
+                } else {
+                    lookupAction.setLookupScreen(null);
+                }
+
+                lookupAction.setLookupScreenOpenType(getLookupOpenMode());
+                lookupAction.setLookupScreenParams(lookupScreenParams);
+            }
+        }
+        component.refreshComponent();
+        component.refreshClickListeners(itemClickListener);
     }
 
     @Override
@@ -186,12 +188,28 @@ public class WebTokenList<V extends Entity> extends WebV8AbstractField<WebTokenL
 
     @Override
     public OpenType getLookupOpenMode() {
-        return lookupOpenMode;
+        OpenType openType = null;
+        if (lookupOpenMode instanceof OpenMode) {
+            openType = OpenType.valueOf(((OpenMode) lookupOpenMode).name());
+        }
+        return openType;
     }
 
     @Override
     public void setLookupOpenMode(OpenType lookupOpenMode) {
-        this.lookupOpenMode = lookupOpenMode;
+        this.lookupOpenMode = lookupOpenMode != null
+                ? lookupOpenMode.getOpenMode()
+                : null;
+    }
+
+    @Override
+    public Screens.LaunchMode getLookupLaunchMode() {
+        return lookupOpenMode;
+    }
+
+    @Override
+    public void setLookupLaunchMode(Screens.LaunchMode launchMode) {
+        this.lookupOpenMode = launchMode;
     }
 
     @Override
@@ -246,19 +264,16 @@ public class WebTokenList<V extends Entity> extends WebV8AbstractField<WebTokenL
 
     @Override
     public void setOptions(Options<V> options) {
-        //noinspection unchecked
-        lookupPickerField.setOptions((Options<Entity>) options);
+        if (options != null
+                && !(options instanceof EntityOptions)) {
+            throw new IllegalArgumentException("TokenList supports only EntityOptions");
+        }
+        lookupPickerField.setOptions(options);
     }
 
     @Override
     public Options<V> getOptions() {
-        //noinspection unchecked
-        return (Options<V>) lookupPickerField.getOptions();
-    }
-
-    @Override
-    public void setDatasource(Datasource datasource, String property) {
-        throw new UnsupportedOperationException("TokenList does not support datasource with property");
+        return lookupPickerField.getOptions();
     }
 
     @Override
@@ -294,83 +309,13 @@ public class WebTokenList<V extends Entity> extends WebV8AbstractField<WebTokenL
     public void setLookup(boolean lookup) {
         if (this.lookup != lookup) {
             if (lookup) {
-                lookupAction = new PickerField.LookupAction(lookupPickerField) {
-                    @Nonnull
-                    @Override
-                    protected Map<String, Object> prepareScreenParams() {
-                        Map<String, Object> screenParams = super.prepareScreenParams();
-                        if (isMultiSelect()) {
-                            screenParams = new HashMap<>(screenParams);
-                            WindowParams.MULTI_SELECT.set(screenParams, true);
-                            // for backward compatibility
-                            screenParams.put("multiSelect", "true");
-                        }
-
-                        return screenParams;
-                    }
-
-                    @SuppressWarnings("unchecked")
-                    @Override
-                    protected void handleLookupWindowSelection(Collection items) {
-                        CollectionValueSource<V> valueSource = (CollectionValueSource<V>) valueBinding.getSource();
-
-                        if (items.isEmpty()) {
-                            return;
-                        }
-
-                        @SuppressWarnings("unchecked")
-                        Collection<Entity> selected = items;
-
-                        CollectionDatasource optionsDatasource = lookupPickerField.getOptionsDatasource();
-                        if (optionsDatasource != null
-                                && lookupPickerField.isRefreshOptionsOnLookupClose()) {
-                            optionsDatasource.refresh();
-
-                            if (valueSource != null) {
-                                for (Object obj : getDatasource().getItems()) {
-                                    Entity entity = (Entity) obj;
-                                    if (getOptionsDatasource().containsItem(entity.getId())) {
-                                        Entity item = getOptionsDatasource().getItem(entity.getId());
-                                        valueSource.updateItem((V) item);
-                                    }
-                                }
-                            }
-                        }
-
-                        // add all selected items to tokens
-                        if (itemChangeHandler != null) {
-                            for (Entity newItem : selected) {
-                                itemChangeHandler.addItem(newItem);
-                            }
-                        } else if (valueSource != null) {
-                            // get master entity and inverse attribute in case of nested datasource
-                            Entity masterEntity = getMasterEntity(valueSource);
-                            MetaProperty inverseProp = getInverseProperty(valueSource);
-
-                            for (Entity newItem : selected) {
-                                if (!valueSource.containsItem(newItem.getId())) {
-                                    // Initialize reference to master entity
-                                    if (inverseProp != null && isInitializeMasterReference(inverseProp)) {
-                                        newItem.setValue(inverseProp.getName(), masterEntity);
-                                    }
-
-                                    valueSource.addItem((V) newItem);
-                                }
-                            }
-                        }
-
-                        afterSelect(items);
-                        if (afterLookupSelectionHandler != null) {
-                            afterLookupSelectionHandler.onSelect(items);
-                        }
-                    }
-                };
+                lookupAction = createLookupAction();
                 lookupPickerField.addAction(lookupAction);
 
                 if (getLookupScreen() != null) {
                     lookupAction.setLookupScreen(getLookupScreen());
                 }
-                lookupAction.setLookupScreenOpenType(lookupOpenMode);
+                lookupAction.setLookupScreenOpenType(getLookupOpenMode());
                 lookupAction.setLookupScreenParams(lookupScreenParams);
             } else {
                 lookupPickerField.removeAction(lookupAction);
@@ -382,16 +327,90 @@ public class WebTokenList<V extends Entity> extends WebV8AbstractField<WebTokenL
                 }
             });
 
-
             lookupAction.setAfterLookupSelectionHandler(items -> {
                 if (afterLookupSelectionHandler != null) {
                     afterLookupSelectionHandler.onSelect(items);
                 }
             });
-
         }
         this.lookup = lookup;
         component.refreshComponent();
+    }
+
+    protected PickerField.LookupAction createLookupAction() {
+        return new PickerField.LookupAction(lookupPickerField) {
+            @Nonnull
+            @Override
+            protected Map<String, Object> prepareScreenParams() {
+                Map<String, Object> screenParams = super.prepareScreenParams();
+
+                if (isMultiSelect()) {
+                    screenParams = new HashMap<>(screenParams);
+                    WindowParams.MULTI_SELECT.set(screenParams, true);
+                    // for backward compatibility
+                    screenParams.put("multiSelect", "true");
+                }
+
+                return screenParams;
+            }
+
+            @SuppressWarnings("unchecked")
+            @Override
+            protected void handleLookupWindowSelection(Collection items) {
+                if (items.isEmpty()) {
+                    return;
+                }
+
+                @SuppressWarnings("unchecked")
+                Collection<Entity> selected = items;
+
+                ValueSource<Collection<V>> valueSource = getValueSourceInternal();
+                EntityOptions<V> options = (EntityOptions<V>) lookupPickerField.getOptions();
+                if (options != null && lookupPickerField.isRefreshOptionsOnLookupClose()) {
+                    options.refresh();
+                    if (valueSource != null) {
+                        Collection<V> value = valueSource.getValue();
+                        valueSource.getValue().forEach(vsv ->
+                                options.getOptions()
+                                        .filter(e -> Objects.equals(e.getId(), vsv.getId()))
+                                        .findFirst()
+                                        .ifPresent(v -> {
+                                            value.remove(vsv);
+                                            value.add(v);
+
+                                            valueSource.setValue(value);
+                                        }));
+                    }
+                }
+
+                // add all selected items to tokens
+                if (itemChangeHandler != null) {
+                    selected.forEach(itemChangeHandler::addItem);
+                } else if (valueSource != null) {
+                    // get master entity and inverse attribute in case of nested valueSource
+                    Entity masterEntity = getMasterEntity(valueSource);
+                    MetaProperty inverseProp = getInverseProperty(valueSource);
+
+                    for (Entity newItem : selected) {
+                        Collection<V> value = valueSource.getValue();
+                        if (!value.contains((V) newItem)) {
+                            // Initialize reference to master entity
+                            if (inverseProp != null && isInitializeMasterReference(inverseProp)) {
+                                newItem.setValue(inverseProp.getName(), masterEntity);
+                            }
+
+                            value.add((V) newItem);
+                            valueSource.setValue(value);
+                        }
+                    }
+                }
+
+                afterSelect(items);
+                if (afterLookupSelectionHandler != null) {
+                    afterLookupSelectionHandler.onSelect(items);
+                }
+            }
+        };
     }
 
     @Override
@@ -606,23 +625,25 @@ public class WebTokenList<V extends Entity> extends WebV8AbstractField<WebTokenL
             return;
         }
 
-        CollectionValueSource<V> valueSource = (CollectionValueSource<V>) valueBinding.getSource();
+        ValueSource<Collection<V>> valueSource = valueBinding.getSource();
 
         if (itemChangeHandler != null) {
             itemChangeHandler.addItem(newItem);
         } else {
             if (valueSource != null) {
-                // get master entity and inverse attribute in case of nested datasource
+                // get master entity and inverse attribute in case of nested valueSource
                 Entity masterEntity = getMasterEntity(valueSource);
                 MetaProperty inverseProp = getInverseProperty(valueSource);
 
-                if (!valueSource.containsItem(newItem.getId())) {
+                if (!valueSource.getValue().contains((V) newItem)) {
                     // Initialize reference to master entity
                     if (inverseProp != null && isInitializeMasterReference(inverseProp)) {
                         newItem.setValue(inverseProp.getName(), masterEntity);
                     }
 
-                    valueSource.addItem((V) newItem);
+                    List<V> newValue = new ArrayList<>(valueSource.getValue());
+                    newValue.add((V) newItem);
+                    valueSource.setValue(newValue);
                 }
             }
         }
@@ -630,28 +651,62 @@ public class WebTokenList<V extends Entity> extends WebV8AbstractField<WebTokenL
         lookupPickerField.focus();
 
         if (lookupPickerField.isRefreshOptionsOnLookupClose()) {
-            for (Object obj : getDatasource().getItems()) {
-                Entity entity = (Entity) obj;
-                if (getOptionsDatasource().containsItem(entity.getId())) {
-                    if (valueSource != null) {
-                        valueSource.updateItem((V) getOptionsDatasource().getItem(entity.getId()));
-                    }
+            if (valueSource != null && getOptions() != null) {
+                List<V> newValue = new ArrayList<>(valueSource.getValue());
+
+                for (V obj : valueSource.getValue()) {
+                    lookupPickerField.getOptions()
+                            .getOptions()
+                            .filter(e -> Objects.equals(e.getId(), obj.getId()))
+                            .findFirst()
+                            .ifPresent(item -> {
+                                newValue.remove(obj);
+                                newValue.add(item);
+                            });
                 }
+
+                valueSource.setValue(newValue);
             }
         }
     }
 
     @Nullable
-    protected Entity getMasterEntity(CollectionValueSource<V> valueSource) {
-        return valueSource.isNested()
-                ? valueSource.getParentEntity()
-                : null;
+    protected Entity getMasterEntity(ValueSource<Collection<V>> valueSource) {
+        Entity masterEntity = null;
+        if (valueSource instanceof DatasourceValueSource) {
+            Datasource ds = ((DatasourceValueSource) valueSource).getDatasource();
+            if (ds instanceof NestedDatasource) {
+                masterEntity = ((NestedDatasource) ds).getMaster().getItem();
+            }
+        } else if (valueSource instanceof ContainerValueSource) {
+            InstanceContainer container = ((ContainerValueSource) valueSource).getContainer();
+            if (container instanceof Nested) {
+                masterEntity = ((Nested) container).getParent().getItem();
+            }
+        }
+        return masterEntity;
     }
 
     @Nullable
-    protected MetaProperty getInverseProperty(CollectionValueSource<V> valueSource) {
-        MetaProperty property = valueSource.isNested() ? valueSource.getProperty() : null;
-        return property != null ? property.getInverse() : null;
+    protected MetaProperty getInverseProperty(ValueSource<Collection<V>> valueSource) {
+        MetaProperty inverseProperty = null;
+
+        if (valueSource instanceof DatasourceValueSource) {
+            Datasource ds = ((DatasourceValueSource) valueSource).getDatasource();
+            if (ds instanceof NestedDatasource) {
+                inverseProperty = ((NestedDatasource) ds).getProperty().getInverse();
+            }
+        } else if (valueSource instanceof ContainerValueSource) {
+            InstanceContainer container = ((ContainerValueSource) valueSource).getContainer();
+            if (container instanceof Nested) {
+                String property = ((Nested) container).getProperty();
+                inverseProperty = ((ContainerValueSource) valueSource).getEntityMetaClass()
+                        .getPropertyNN(property)
+                        .getInverse();
+            }
+        }
+
+        return inverseProperty;
     }
 
     protected boolean isInitializeMasterReference(MetaProperty inverseProp) {
@@ -663,13 +718,34 @@ public class WebTokenList<V extends Entity> extends WebV8AbstractField<WebTokenL
     protected boolean isInversePropertyAssignableFromDsClass(MetaProperty inverseProp) {
         ExtendedEntities extendedEntities = metadata.getExtendedEntities();
 
+        Class entityClass = extendedEntities.getEffectiveClass(getMetaClass());
         Class inversePropClass = extendedEntities.getEffectiveClass(inverseProp.getDomain());
 
-        CollectionValueSource<V> valueSource = (CollectionValueSource<V>) valueBinding.getSource();
-        Class dsClass = extendedEntities.getEffectiveClass(valueSource.getMetaClass());
-
         //noinspection unchecked
-        return inversePropClass.isAssignableFrom(dsClass);
+        return inversePropClass.isAssignableFrom(entityClass);
+    }
+
+    @Nonnull
+    protected MetaClass getMetaClass() {
+        MetaClass metaClass = null;
+
+        if (getValueSourceInternal() != null) {
+            ValueSource<Collection<V>> valueSource = getValueSourceInternal();
+
+            if (valueSource instanceof DatasourceValueSource) {
+                metaClass = ((DatasourceValueSource) valueSource).getEntityMetaClass();
+            } else if (valueSource instanceof ContainerValueSource) {
+                metaClass = ((ContainerValueSource) valueSource).getEntityMetaClass();
+            }
+        } else if (getOptions() != null) {
+            metaClass = ((EntityOptions<V>) getOptions()).getEntityMetaClass();
+        }
+
+        if (metaClass == null) {
+            throw new IllegalStateException("Either ValueSource or Options should be specified");
+        }
+
+        return metaClass;
     }
 
     @Override
@@ -686,10 +762,10 @@ public class WebTokenList<V extends Entity> extends WebV8AbstractField<WebTokenL
         }
     }
 
-    protected CollectionValueSource getValueSourceInternal() {
-        return valueBinding == null
-                ? null
-                : ((CollectionValueSource<V>) valueBinding.getSource());
+    protected ValueSource<Collection<V>> getValueSourceInternal() {
+        return valueBinding != null
+                ? valueBinding.getSource()
+                : null;
     }
 
     public static class CubaTokenList<T> extends CustomField<T> {
@@ -743,10 +819,11 @@ public class WebTokenList<V extends Entity> extends WebV8AbstractField<WebTokenL
 
         @Override
         public boolean isEmpty() {
-            CollectionValueSource valueSource = owner.getValueSourceInternal();
+            //noinspection unchecked
+            ValueSource<Collection<Entity>> valueSource = owner.getValueSourceInternal();
 
             if (valueSource != null) {
-                return valueSource.getItems().isEmpty();
+                return valueSource.getValue().isEmpty();
             }
             return super.isEmpty();
         }
@@ -826,16 +903,17 @@ public class WebTokenList<V extends Entity> extends WebV8AbstractField<WebTokenL
                 });
             } else {
                 addButtonSub = owner.addButton.addClickListener(e -> {
-                    String windowAlias;
+                    String windowAlias = null;
                     if (owner.getLookupScreen() != null) {
                         windowAlias = owner.getLookupScreen();
-                    } else if (owner.getOptionsDatasource() != null) {
-                        windowAlias = owner.windowConfig.getBrowseScreenId(owner.getOptionsDatasource().getMetaClass());
-                    } else {
-                        windowAlias = owner.windowConfig.getBrowseScreenId(owner.getValueSourceInternal().getMetaClass());
+                    } else if (owner.getOptions() != null) {
+                        windowAlias = owner.windowConfig.getBrowseScreenId(((EntityOptions) owner.getOptions()).getEntityMetaClass());
+                    } else if (owner.getValueSourceInternal() != null){
+                        MetaClass entityMetaClass = ((EntityValueSource) owner.getValueSourceInternal()).getEntityMetaClass();
+                        windowAlias = owner.windowConfig.getBrowseScreenId(entityMetaClass);
                     }
 
-                    WindowInfo windowInfo = owner.windowConfig.getWindowInfo(windowAlias);
+                    Class<? extends Entity> entityClass = owner.getMetaClass().getJavaClass();
 
                     Map<String, Object> params = new HashMap<>();
                     params.put("windowOpener", owner.getFrame().getId());
@@ -849,29 +927,35 @@ public class WebTokenList<V extends Entity> extends WebV8AbstractField<WebTokenL
                         params.putAll(owner.lookupScreenParams);
                     }
 
-                    WindowManager wm = App.getInstance().getWindowManager();
+                    Screen lookupScreen = owner.lookupScreens.builder(entityClass, owner.getFrame().getFrameOwner())
+                            .withScreen(windowAlias)
+                            .withLaunchMode(owner.getLookupLaunchMode())
+                            .withOptions(new MapScreenOptions(params))
+                            .withSelectHandler(selectedItems -> {
+                                if (owner.lookupPickerField.isRefreshOptionsOnLookupClose()) {
+                                    //noinspection unchecked
+                                    ((EntityOptions<Entity>) owner.getOptions()).refresh();
+                                }
 
-                    AbstractLookup lookupWindow = (AbstractLookup) wm.openLookup(windowInfo, items -> {
-                        if (owner.lookupPickerField.isRefreshOptionsOnLookupClose()) {
-                            owner.lookupPickerField.getOptionsDatasource().refresh();
-                        }
+                                if (owner.isEditable()) {
+                                    if (selectedItems == null || selectedItems.isEmpty()) {
+                                        return;
+                                    }
 
-                        if (owner.isEditable()) {
-                            if (items == null || items.isEmpty()) return;
+                                    handleLookupInternal(selectedItems);
 
-                            handleLookupInternal(items);
-
-                            if (owner.afterLookupSelectionHandler != null) {
-                                owner.afterLookupSelectionHandler.onSelect(items);
-                            }
-                        }
-                        owner.addButton.focus();
-                    }, owner.lookupOpenMode, params);
+                                    if (owner.afterLookupSelectionHandler != null) {
+                                        owner.afterLookupSelectionHandler.onSelect(selectedItems);
+                                    }
+                                }
+                                owner.addButton.focus();
+                            })
+                            .build();
 
                     if (owner.afterLookupCloseHandler != null) {
-                        lookupWindow.addAfterCloseListener(event -> {
+                        lookupScreen.addAfterCloseListener(event -> {
                             String actionId = ((StandardCloseAction) event.getCloseAction()).getActionId();
-                            owner.afterLookupCloseHandler.onClose(lookupWindow, actionId);
+                            owner.afterLookupCloseHandler.onClose(lookupScreen.getWindow(), actionId);
                         });
                     }
                 });
@@ -899,29 +983,35 @@ public class WebTokenList<V extends Entity> extends WebV8AbstractField<WebTokenL
         }
 
         @SuppressWarnings("unchecked")
-        protected void handleLookupInternal(Collection items) {
-            // get master entity and inverse attribute in case of nested datasource
-            CollectionValueSource valueSource = owner.getValueSourceInternal();
+        protected void handleLookupInternal(Collection<? extends Entity> entities) {
+            // get master entity and inverse attribute in case of nested valueSource
+            ValueSource<Collection<Entity>> valueSource = owner.getValueSourceInternal();
 
             Entity masterEntity = owner.getMasterEntity(valueSource);
             MetaProperty inverseProp = owner.getInverseProperty(valueSource);
             boolean initializeMasterReference = inverseProp != null && owner.isInitializeMasterReference(inverseProp);
 
-            for (final Object item : items) {
+            List<Entity> newValue = null;
+            if (valueSource != null) {
+                newValue = new ArrayList<>(valueSource.getValue());
+            }
+
+            for (Entity entity : entities) {
                 if (owner.itemChangeHandler != null) {
-                    owner.itemChangeHandler.addItem(item);
+                    owner.itemChangeHandler.addItem(entity);
                 } else {
-                    if (item instanceof Entity) {
-                        Entity entity = (Entity) item;
-                        if (valueSource != null && !valueSource.containsItem(entity.getId())) {
-                            // Initialize reference to master entity
-                            if (initializeMasterReference) {
-                                entity.setValue(inverseProp.getName(), masterEntity);
-                            }
-                            valueSource.addItem(entity);
+                    if (valueSource != null && !valueSource.getValue().contains(entity)) {
+                        // Initialize reference to master entity
+                        if (initializeMasterReference) {
+                            entity.setValue(inverseProp.getName(), masterEntity);
                         }
+                        newValue.add(entity);
                     }
                 }
+            }
+
+            if (newValue != null) {
+                valueSource.setValue(newValue);
             }
         }
 
@@ -954,28 +1044,28 @@ public class WebTokenList<V extends Entity> extends WebV8AbstractField<WebTokenL
 
             tokenContainer.removeAllComponents();
 
-            CollectionValueSource valueSource = owner.getValueSourceInternal();
+            //noinspection unchecked
+            ValueSource<Collection<Entity>> valueSource = owner.getValueSourceInternal();
 
             if (valueSource != null) {
                 List<Instance> usedItems = new ArrayList<>();
 
                 // New tokens
-                for (final Object itemId : valueSource.getItemIds()) {
+                for (final Entity entity : valueSource.getValue()) {
                     //noinspection unchecked
-                    final Instance item = valueSource.getItem(itemId);
-                    CubaTokenListLabel f = itemComponents.get(item);
+                    CubaTokenListLabel f = itemComponents.get(entity);
                     if (f == null) {
                         f = createToken();
-                        itemComponents.put(item, f);
-                        componentItems.put(f, item);
+                        itemComponents.put(entity, f);
+                        componentItems.put(f, entity);
                     }
                     f.setEditable(owner.isEditable());
-                    f.setText(owner.instanceCaption(item));
+                    f.setText(owner.instanceCaption(entity));
                     f.setWidthUndefined();
 
-                    setTokenStyle(f, itemId);
+                    setTokenStyle(f, entity.getId());
                     tokenContainer.addComponent(f);
-                    usedItems.add(item);
+                    usedItems.add(entity);
                 }
 
                 // Remove obsolete items
@@ -1041,12 +1131,12 @@ public class WebTokenList<V extends Entity> extends WebV8AbstractField<WebTokenL
         }
 
         public void refreshClickListeners(ItemClickListener listener) {
-            CollectionValueSource valueSource = owner.getValueSourceInternal();
+            //noinspection unchecked
+            ValueSource<Collection<Entity>> valueSource = owner.getValueSourceInternal();
             if (valueSource != null && BindingState.ACTIVE.equals(valueSource.getState())) {
-                for (Object id : valueSource.getItemIds()) {
+                for (Entity entity : valueSource.getValue()) {
                     //noinspection unchecked
-                    Instance item = valueSource.getItem(id);
-                    final CubaTokenListLabel label = itemComponents.get(item);
+                    final CubaTokenListLabel label = itemComponents.get(entity);
                     if (label != null) {
                         if (listener != null) {
                             label.setClickListener(source ->
@@ -1072,29 +1162,36 @@ public class WebTokenList<V extends Entity> extends WebV8AbstractField<WebTokenL
 
         @SuppressWarnings("unchecked")
         protected void doRemove(CubaTokenListLabel source) {
-            CollectionValueSource valueSource = owner.getValueSourceInternal();
+            ValueSource<Collection<? extends Entity>> valueSource = owner.getValueSourceInternal();
 
             Instance item = componentItems.get(source);
             if (item != null) {
                 itemComponents.remove(item);
                 componentItems.remove(source);
 
+                List<? extends Entity> newValue = null;
+                if (valueSource != null) {
+                    newValue = new ArrayList<>(valueSource.getValue());
+                }
+
                 if (owner.itemChangeHandler != null) {
                     owner.itemChangeHandler.removeItem(item);
                 } else {
                     if (valueSource != null) {
-                        // get inverse attribute in case of nested datasource
+                        // get inverse attribute in case of nested valueSource
                         MetaProperty inverseProp = owner.getInverseProperty(valueSource);
                         boolean initializeMasterReference = inverseProp != null
                                 && owner.isInitializeMasterReference(inverseProp);
 
                         if (initializeMasterReference) {
                             item.setValue(inverseProp.getName(), null);
-                            valueSource.removeItem((Entity) item);
-                        } else {
-                            valueSource.removeItem((Entity) item);
                         }
+                        newValue.remove((Entity) item);
                     }
+                }
+
+                if (newValue != null) {
+                    valueSource.setValue(newValue);
                 }
             }
         }
