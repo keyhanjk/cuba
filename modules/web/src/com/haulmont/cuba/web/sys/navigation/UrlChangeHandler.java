@@ -90,12 +90,16 @@ public class UrlChangeHandler {
         this.ui = ui;
     }
 
-    public void handleUriChange(@SuppressWarnings("unused") Page.PopStateEvent event) {
+    public void handleUrlChange(Page.PopStateEvent event) {
         if (notSuitableUrlHandlingMode()) {
             return;
         }
 
-        NavigationState requestedState = ui.getUrlRouting().getState();
+        int hashIdx = event.getUri().indexOf("#");
+        NavigationState requestedState = hashIdx < 0
+                ? NavigationState.empty()
+                : UrlTools.parseState(event.getUri().substring(hashIdx + 1));
+
         if (requestedState == null) {
             log.debug("Unable to handle requested state: \"{}\"", Page.getCurrent().getUriFragment());
             reloadApp();
@@ -107,43 +111,42 @@ public class UrlChangeHandler {
             return;
         }
 
-        handleUriChange(requestedState);
+        __handleUrlChange(requestedState);
     }
 
-    protected void handleUriChange(NavigationState requestedState) {
-        if (historyNavigation(requestedState)) {
-            handleHistoryNavigation(requestedState);
-        } else {
+    protected void __handleUrlChange(NavigationState requestedState) {
+        boolean historyNavHandled = handleHistoryNavigation(requestedState);
+        if (!historyNavHandled) {
             handleScreenNavigation(requestedState);
         }
     }
 
-    protected boolean historyNavigation(NavigationState requestedState) {
-        return Objects.equals(requestedState, getHistory().getPrevious()) || Objects.equals(requestedState, getHistory().getNext());
-    }
+    protected boolean handleHistoryNavigation(NavigationState requestedState) {
+        boolean backward = getHistory().searchBackward(requestedState)
+                || (getHistory().searchBackward(requestedState) && findActiveScreenByState(requestedState) != null);
+        boolean forward = getHistory().searchForward(requestedState);
 
-    protected void handleHistoryNavigation(NavigationState requestedState) {
-        if (Objects.equals(requestedState, getHistory().getPrevious())) {
-            handleHistoryBackward();
-        } else {
+        if (backward) {
+            handleHistoryBackward(requestedState);
+        } else if (forward) {
             handleHistoryForward();
         }
+
+        return backward || forward;
     }
 
-    protected void handleHistoryBackward() {
-        NavigationState prevState = getHistory().getPrevious();
-        AccessCheckResult accessCheckResult = navigationAllowed(prevState);
+    protected void handleHistoryBackward(NavigationState requestedState) {
+        AccessCheckResult accessCheckResult = navigationAllowed(requestedState);
         if (!accessCheckResult.isAllowed()) {
             showNotification(accessCheckResult.getMessage());
             revertNavigationState();
             return;
         }
 
-        Screen prevScreen = findScreenByState(prevState);
-        //noinspection ConstantConditions
-        if (prevScreen == null && StringUtils.isNotEmpty(prevState.getStateMark())) {
-            revertNavigationState();
+        Screen prevScreen = findScreenByState(requestedState);
+        if (prevScreen == null && StringUtils.isNotEmpty(requestedState.getStateMark())) {
             showNotification(messages.getMainMessage("navigation.unableToGoBackward"));
+            revertNavigationState();
             return;
         }
 
@@ -152,22 +155,21 @@ public class UrlChangeHandler {
             OperationResult screenCloseResult = lastOpenedScreen
                     .getWindow().getFrameOwner()
                     .close(FrameOwner.WINDOW_CLOSE_ACTION)
-                    .then(this::proceedHistoryBackward);
+                    .then(() -> proceedHistoryBackward(requestedState));
 
             if (OperationResult.Status.FAIL == screenCloseResult.getStatus()
                     || OperationResult.Status.UNKNOWN == screenCloseResult.getStatus()) {
                 revertNavigationState();
             }
         } else {
-            proceedHistoryBackward();
+            proceedHistoryBackward(requestedState);
         }
     }
 
-    protected void proceedHistoryBackward() {
-        NavigationState prevState = getHistory().backward();
-        selectScreen(findActiveScreenByState(prevState));
-        //noinspection ConstantConditions
-        replaceState(prevState.asRoute());
+    protected void proceedHistoryBackward(NavigationState requestedState) {
+        getHistory().backward();
+        selectScreen(findActiveScreenByState(requestedState));
+        replaceState(requestedState.asRoute());
     }
 
     protected void handleHistoryForward() {
@@ -554,6 +556,6 @@ public class UrlChangeHandler {
         if (notSuitableUrlHandlingMode()) {
             return;
         }
-        handleUriChange(requestedState);
+        __handleUrlChange(requestedState);
     }
 }
